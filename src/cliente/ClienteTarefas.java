@@ -7,21 +7,74 @@ import java.util.Scanner;
 
 public class ClienteTarefas {
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException {
 		Socket socket = new Socket("localhost", 12345);
 		
-		System.out.println("Conexão Estabelecida");
+		System.out.println("Conexão Estabelecida");		
 		
-		PrintStream saida = new PrintStream(socket.getOutputStream());
-		saida.println("Cliente " + socket.getLocalPort());
+		//Enviar dados do servidor
+		Thread threadEnviaComando = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				System.out.println("Pode Enviar!");
+
+				try {
+					PrintStream saida = new PrintStream(socket.getOutputStream());
+					
+					Scanner teclado = new Scanner(System.in);
+					while(teclado.hasNextLine()) {
+						String linha = teclado.nextLine();
+						
+						if(linha.trim().equals("")) {
+							break;
+						}
+						
+						saida.println(linha);
+					}
+					
+					teclado.close();
+					saida.close();
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+			}
+		});
 		
-//		saida.println("c1");
 		
-		Scanner teclado = new Scanner(System.in);
-		teclado.nextLine();
+		//Recebe dados do servidor
+		Thread threadRecebeResposta = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				System.out.println("Recebendo Dados do Servidor!");
+				
+				try {
+					Scanner respostaServidor = new Scanner(socket.getInputStream());
+					
+					while(respostaServidor.hasNextLine()) {
+						String linha = respostaServidor.nextLine();
+						
+//						saida.println(linha);
+						System.out.println(linha);
+					}
+					respostaServidor.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 		
-		teclado.close();
-		saida.close();
+		
+		threadEnviaComando.start();
+		threadRecebeResposta.start();
+		
+		//Thread Main espera o fim da thread da que está ligada para que não tenha conflito
+		threadEnviaComando.join();
+		
+		System.out.println("Fechando o socket do cliente");
 		socket.close();
 		
 	}
